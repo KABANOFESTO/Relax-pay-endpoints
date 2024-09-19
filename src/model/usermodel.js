@@ -13,6 +13,8 @@ const schema = mongoose.Schema({
     role: {
         type: String,
         required: [true, 'Please add a role'],
-    }
+    },
+    resetPasswordToken: String,
+    resetPasswordExpires: Date
 })
 module.exports = mongoose.model('User', schema)

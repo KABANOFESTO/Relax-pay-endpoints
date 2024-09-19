@@ -4,14 +4,18 @@ const customerSchema = new mongoose.Schema({
     product: {
         type: {
             type: String,
-            require: true,
+            required: true,
         }
     },
     quantity: {
         type: {
             type: String,
-            require: true,
+            required: true,
         }
+    },
+    number: {
+        type: String,
+        required: true
     },
     date: {
         type: Date,
