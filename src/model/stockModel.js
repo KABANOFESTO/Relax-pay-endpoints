@@ -2,26 +2,20 @@ const mongoose = require('mongoose');
 
 const stockSchema = new mongoose.Schema({
     product: {
-        type: {
-            type: String,
-            required: true,
-        }
+        type: String,
+        required: true,
     },
     price: {
-        type: {
-            type: String,
-            required: true,
-        }
+        type: Number,
+        required: true,
     },
     quantity: {
-        type: {
-            type: String,
-            required: true,
-        }
+        type: Number,
+        required: true,
     },
     date: {
         type: Date,
-        default: Date.now 
+        default: Date.now
     }
 });
 

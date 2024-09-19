@@ -1,23 +1,26 @@
 const express = require('express');
 const Stock = require('../model/stockModel');
+const { stockSchema } = require('../support/validation');
 
 const router = express.Router();
 
+// Create or update stock (POST)
 router.post('/stock', async (req, res) => {
     try {
-        const { product, price, quantity } = req.body;
-
-        if (!product || !price || !quantity) {
+        // Validate input using Joi schema
+        const { error } = stockSchema.validate(req.body);
+        if (error) {
             return res.status(400).json({
                 success: false,
-                message: 'Product, price, and quantity are required'
+                message: error.details[0].message
             });
         }
 
-        const existingStock = await Stock.findOne({ 'product.type': product });
+        const { product, price, quantity } = req.body;
+
+        const existingStock = await Stock.findOne({ product });
 
         if (existingStock) {
-            
             existingStock.quantity = parseInt(existingStock.quantity) + parseInt(quantity);
             await existingStock.save();
 
@@ -92,6 +95,14 @@ router.get('/stock/:id', async (req, res) => {
 // Update stock by ID (PUT)
 router.put('/stock/:id', async (req, res) => {
     try {
+        const { error } = stockSchema.validate(req.body);
+        if (error) {
+            return res.status(400).json({
+                success: false,
+                message: error.details[0].message
+            });
+        }
+
         const { product, price, quantity } = req.body;
 
         const stock = await Stock.findById(req.params.id);
@@ -133,7 +144,7 @@ router.delete('/stock/:id', async (req, res) => {
             });
         }
 
-        await stock.remove();
+        await stock.deleteOne();
 
         res.status(200).json({
             success: true,

@@ -1,28 +1,10 @@
 const mongoose = require('mongoose');
 
 const customerSchema = new mongoose.Schema({
-    product: {
-        type: {
-            type: String,
-            required: true,
-        }
-    },
-    quantity: {
-        type: {
-            type: String,
-            required: true,
-        }
-    },
-    number: {
-        type: String,
-        required: true
-    },
-    date: {
-        type: Date,
-        default: Date.now
-    }
+    product: { type: String, required: true },
+    quantity: { type: Number, required: true },
+    number_to_pay: { type: Number, required: true },
+    number_to_receive: { type: Number, required: true }
 });
 
-const Customer = mongoose.model("Customer", customerSchema);
-
-module.exports = Customer;
+module.exports = mongoose.model('Customer', customerSchema);
