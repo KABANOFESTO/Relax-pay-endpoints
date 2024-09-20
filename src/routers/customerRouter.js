@@ -18,18 +18,18 @@ const africastalking = AfricasTalking({
 
 console.log('AfricasTalking SDK initialized:', africastalking);
 
-// Get the payment service
-const payments = africastalking.PAYMENTS;
-console.log('Payments service:', payments);
+// Get the airtime service
+const airtime = africastalking.AIRTIME;
+console.log('Airtime service:', airtime);
 
-if (!payments || !payments.mobileCheckout) {
-  console.error('Payments service or mobileCheckout is not available');
+if (!airtime) {
+  console.error('Airtime service is not available');
 }
 
-// Create a new transaction and send messages (POST)
+// Create a new transaction and send airtime (POST)
 router.post("/transaction", async (req, res) => {
   console.log('Received transaction request:', req.body);
-  
+
   const { product, quantity, number_to_receive, number_to_pay } = req.body;
 
   if (!product || !quantity || !number_to_receive || !number_to_pay) {
@@ -59,8 +59,7 @@ router.post("/transaction", async (req, res) => {
     // Reduce stock quantity
     stockItem.quantity -= quantity;
     await stockItem.save();
-
-    // Create and save customer record
+    
     const newCustomer = new Customer({
       product,
       quantity,
@@ -69,40 +68,49 @@ router.post("/transaction", async (req, res) => {
     });
     await newCustomer.save();
 
-    // Calculate total amount based on stock price and quantity
     const totalAmount = stockItem.price * quantity;
 
     const options = {
-      productName: process.env.AT_PRODUCT_NAME,
-      phoneNumber: number_to_pay,
-      currencyCode: "RWF",
-      amount: totalAmount,
-      metadata: {
-        reason: "Payment for goods"
-      }
+      recipients: [
+        {
+          phoneNumber: number_to_receive,
+          amount: totalAmount,
+          currencyCode: "RWF"
+        }
+      ]
     };
 
-    console.log('Payment options:', options);
+    console.log('Airtime options:', options);
 
-    if (!payments || typeof payments.mobileCheckout !== 'function') {
-      throw new Error('Payments service or mobileCheckout method is not available');
+    if (!airtime || typeof airtime.send !== 'function') {
+      throw new Error('Airtime service or send method is not available');
     }
 
-    payments.mobileCheckout(options)
+    airtime.send(options)
       .then(response => {
-        console.log('Payment response:', response);
+        console.log('Airtime response:', response);
         res.status(201).json({
           success: true,
           transaction: newCustomer,
           stock: stockItem,
-          paymentResponse: response
+          airtimeResponse: response
         });
       })
       .catch(error => {
-        console.error('Payment error:', error);
+        console.error('Airtime error:', error);
+        console.error('Error details:', {
+          message: error.message,
+          stack: error.stack,
+          response: error.response ? {
+            status: error.response.status,
+            statusText: error.response.statusText,
+            data: error.response.data
+          } : 'No response'
+        });
         res.status(500).json({
           success: false,
-          message: error.toString()
+          message: error.message,
+          details: error.response ? error.response.data : 'No additional details'
         });
       });
   } catch (error) {
@@ -130,13 +138,51 @@ router.get("/transactions", async (req, res) => {
   }
 });
 
-// Create callback route for payment status
-router.post("/payment-status", async (req, res) => {
-  console.log('Payment status received:', req.body);
-  res.status(200).json({
-    status: "success",
-    message: "Payment status received successfully"
-  });
+// Airtime Status Notification endpoint
+router.post("/airtime-status", async (req, res) => {
+  const {
+    phoneNumber,
+    description,
+    status,
+    requestId,
+    discount,
+    value
+  } = req.body;
+
+  console.log('Received Airtime Status Notification:', req.body);
+
+  try {
+    // Find the customer by phone number
+    const customer = await Customer.findOne({ number_to_receive: phoneNumber });
+    if (customer) {
+      // Update customer record with airtime status
+      customer.airtimeStatus = status;
+      customer.airtimeDescription = description;
+      customer.airtimeRequestId = requestId;
+      customer.airtimeDiscount = discount;
+      customer.airtimeValue = value;
+      await customer.save();
+      console.log('Customer record updated with airtime status');
+    } else {
+      console.log('No matching customer found for phone number:', phoneNumber);
+    }
+
+    // If the status is 'Failed', you might want to refund the stock
+    if (status === 'Failed') {
+      const stock = await Stock.findOne({ product: customer.product });
+      if (stock) {
+        stock.quantity += customer.quantity;
+        await stock.save();
+        console.log('Stock refunded due to failed transaction');
+      }
+    }
+
+    // Respond to Africa's Talking to acknowledge receipt of the notification
+    res.status(200).json({ message: 'Status notification received and processed' });
+  } catch (error) {
+    console.error('Error processing airtime status notification:', error);
+    res.status(500).json({ message: 'Error processing status notification' });
+  }
 });
 
 module.exports = router;

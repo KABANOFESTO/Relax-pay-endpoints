@@ -3,38 +3,40 @@ const nodemailer = require('nodemailer');
 const User = require('../model/usermodel');
 const bcrypt = require('bcryptjs');
 const express = require('express');
-require('dotenv').config(); 
+require('dotenv').config();
 
 const router = express.Router();
 
+// Create a transporter using Gmail
 const transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: {
-        user: process.env.GMAIL_USER, 
-        pass: process.env.GMAIL_PASS 
+        user: process.env.GMAIL_USER,
+        pass: process.env.GMAIL_PASS
     }
 });
 
+// Endpoint to request a password reset
 router.post('/forgot-password', async (req, res) => {
     try {
-        const { email } = req.body; 
+        const { email } = req.body;
         const user = await User.findOne({ email });
 
         if (!user) {
-            return res.status(404).json({ "success": false, message: "User with that email not found" });
+            return res.status(404).json({ success: false, message: "User with that email not found" });
         }
 
         // Generate reset token
         const resetToken = crypto.randomBytes(32).toString('hex');
         user.resetPasswordToken = crypto.createHash('sha256').update(resetToken).digest('hex');
-        user.resetPasswordExpires = Date.now() + 3600000;
+        user.resetPasswordExpires = Date.now() + 3600000; // Token valid for 1 hour
         await user.save();
 
         // Send reset email
-        const resetUrl = `http://localhost:4000/reset-password/${resetToken}`; // URL to frontend reset page
+        const resetUrl = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
         const mailOptions = {
             to: user.email,
-            from: process.env.GMAIL_USER, // Use the environment variable for the sender's email
+            from: process.env.GMAIL_USER,
             subject: 'Password Reset',
             text: `You are receiving this because you (or someone else) have requested a password reset for your account.\n\n
                    Please click on the following link, or paste it into your browser to complete the process:\n\n
@@ -44,13 +46,14 @@ router.post('/forgot-password', async (req, res) => {
 
         await transporter.sendMail(mailOptions);
 
-        res.status(200).json({ "success": true, message: "Password reset email sent successfully" });
+        res.status(200).json({ success: true, message: "Password reset email sent successfully" });
     } catch (error) {
-        res.status(500).json({ "success": false, message: error.message });
+        console.error('Password reset request error:', error);
+        res.status(500).json({ success: false, message: "An error occurred while processing your request" });
     }
 });
 
-// Route to reset password using token
+// Endpoint to reset password using token
 router.post('/reset-password/:token', async (req, res) => {
     try {
         const { token } = req.params;
@@ -60,11 +63,11 @@ router.post('/reset-password/:token', async (req, res) => {
         const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
         const user = await User.findOne({
             resetPasswordToken: hashedToken,
-            resetPasswordExpires: { $gt: Date.now() } // Check if the token is not expired
+            resetPasswordExpires: { $gt: Date.now() }
         });
 
         if (!user) {
-            return res.status(400).json({ "success": false, message: "Invalid or expired token" });
+            return res.status(400).json({ success: false, message: "Invalid or expired token" });
         }
 
         // Update the password
@@ -74,10 +77,11 @@ router.post('/reset-password/:token', async (req, res) => {
         user.resetPasswordExpires = undefined;
         await user.save();
 
-        res.status(200).json({ "success": true, message: "Password reset successful" });
+        res.status(200).json({ success: true, message: "Password reset successful" });
     } catch (error) {
-        res.status(500).json({ "success": false, message: error.message });
+        console.error('Password reset error:', error);
+        res.status(500).json({ success: false, message: "An error occurred while resetting the password" });
     }
 });
 
-module.exports = router; // Make sure to export the router at the end
+module.exports = router;
