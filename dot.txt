@@ -1,0 +1,209 @@
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Data.SqlClient;
+using System.Drawing;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+using System.Data.SqlClient;
+
+namespace SheillaBusiness
+{
+    public partial class Land : Form
+    {
+        public Land()
+        {
+            InitializeComponent();
+        }
+
+        private void Land_Load(object sender, EventArgs e)
+        {
+
+        }
+
+        private void button3_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                SqlConnection conn = new SqlConnection("Data Source=JUURUPC;Initial Catalog=SheillaDb;Integrated Security=True;TrustServerCertificate=True");
+                string query = "INSERT INTO land (upi, size, type, description, price) VALUES (@upi, @size, @type, @description, @price)";
+                SqlCommand cmd = new SqlCommand(query, conn);
+
+                cmd.Parameters.AddWithValue("@upi", upiTb.Text.Trim());
+                cmd.Parameters.AddWithValue("@size", sizeTb.Text.Trim());
+                cmd.Parameters.AddWithValue("@type", Convert.ToInt32(typeTb.SelectedValue));
+                cmd.Parameters.AddWithValue("@description", descriptionTb.Text.Trim());
+                cmd.Parameters.AddWithValue("@price", priceTb.Text.Trim());
+
+                conn.Open();
+                cmd.ExecuteNonQuery();
+                conn.Close();
+
+                // Display success message
+                MessageBox.Show("Record saved successfully!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                // Display error message if something goes wrong
+                MessageBox.Show("Error: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+
+        private void linkLabel1_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
+        {
+            Login login = new Login();
+            this.Hide();
+            login.Show();
+            login.FormClosed += (s, args) => this.Show();
+        }
+
+        private void button1_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                SqlConnection conn = new SqlConnection("Data Source=JUURUPC;Initial Catalog=SheillaDb;Integrated Security=True;TrustServerCertificate=True");
+                string query = "UPDATE land SET size = @size, type = @type, description = @description, price = @price WHERE upi = @upi";
+                SqlCommand cmd = new SqlCommand(query, conn);
+                cmd.Parameters.AddWithValue("@upi", upiTb.Text.Trim());
+                cmd.Parameters.AddWithValue("@size", sizeTb.Text.Trim());
+                cmd.Parameters.AddWithValue("@type", Convert.ToInt32(typeTb.SelectedValue));
+                cmd.Parameters.AddWithValue("@description", descriptionTb.Text.Trim());
+                cmd.Parameters.AddWithValue("@price", priceTb.Text.Trim());
+                conn.Open();
+                int rowsAffected = cmd.ExecuteNonQuery();
+                conn.Close();
+
+                if (rowsAffected > 0)
+                {
+                    // Display success message
+                    MessageBox.Show("Record updated successfully!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    upiTb.Clear();
+                    sizeTb.Clear();
+                    descriptionTb.Clear();
+                    priceTb.Clear();
+                }
+                else
+                {
+                    // Display message if no rows were updated
+                    MessageBox.Show("No records were updated. The UPI may not exist.", "Information", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+            }
+            catch (Exception ex)
+            {
+                // Display error message if something goes wrong
+                MessageBox.Show("Error: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void button2_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                SqlConnection conn = new SqlConnection("Data Source=JUURUPC;Initial Catalog=SheillaDb;Integrated Security=True;TrustServerCertificate=True");
+                string query = "DELETE FROM land WHERE upi = @upi";
+                SqlCommand cmd = new SqlCommand(query, conn);
+                cmd.Parameters.AddWithValue("@upi", upiTb.Text.Trim());
+                conn.Open();
+                int rowsAffected = cmd.ExecuteNonQuery();
+                conn.Close();
+
+                if (rowsAffected > 0)
+                {
+                    // Display success message
+                    MessageBox.Show("Record deleted successfully!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+                else
+                {
+                    // Display message if no rows were deleted
+                    MessageBox.Show("No records were deleted. The UPI may not exist.", "Information", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+            }
+            catch (Exception ex)
+            {
+                // Display error message if something goes wrong
+                MessageBox.Show("Error: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void button4_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                SqlConnection conn = new SqlConnection("Data Source=JUURUPC;Initial Catalog=SheillaDb;Integrated Security=True;TrustServerCertificate=True");
+                string query = "SELECT * FROM land WHERE upi = @upi";
+                SqlCommand cmd = new SqlCommand(query, conn);
+                cmd.Parameters.AddWithValue("@upi", textBox6.Text.Trim());
+                conn.Open();
+                SqlDataReader reader = cmd.ExecuteReader();
+
+                if (reader.Read())
+                {
+                    // Display the data in the textboxes
+                    upiTb.Text = reader["upi"].ToString();
+                    sizeTb.Text = reader["size"].ToString();
+                    typeTb.SelectedValue = reader["type"].ToString();
+                    descriptionTb.Text = reader["description"].ToString();
+                    priceTb.Text = reader["price"].ToString();
+
+                    MessageBox.Show("Record found and displayed!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+                else
+                {
+                    // Clear the textboxes if no record is found
+                    sizeTb.Text = "";
+                    typeTb.SelectedIndex = -1;
+                    descriptionTb.Text = "";
+                    priceTb.Text = "";
+
+                    MessageBox.Show("No record found with the given UPI.", "Information", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+
+                reader.Close();
+                conn.Close();
+            }
+            catch (Exception ex)
+            {
+                // Display error message if something goes wrong
+                MessageBox.Show("Error: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void button5_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                SqlConnection conn = new SqlConnection("Data Source=JUURUPC;Initial Catalog=SheillaDb;Integrated Security=True;TrustServerCertificate=True");
+                string query = "SELECT * FROM land";
+                SqlCommand cmd = new SqlCommand(query, conn);
+                conn.Open();
+
+                SqlDataAdapter da = new SqlDataAdapter(cmd);
+                DataTable dt = new DataTable();
+                da.Fill(dt);
+
+                // Assuming you have a DataGridView named dataGridViewLand
+                dataGridView1.DataSource = dt;
+
+                conn.Close();
+
+                if (dt.Rows.Count > 0)
+                {
+                    MessageBox.Show($"{dt.Rows.Count} records found and displayed!", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+                else
+                {
+                    MessageBox.Show("No records found in the land table.", "Information", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+            }
+            catch (Exception ex)
+            {
+                // Display error message if something goes wrong
+                MessageBox.Show("Error: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+    }
+}
